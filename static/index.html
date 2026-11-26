@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classifieur de Sentiment Multi-source</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #f1f5f9; color: #1e293b; padding: 30px 15px; }
+        .container { max-width: 820px; margin: 0 auto; }
+        .top-nav { display: flex; gap: 15px; margin-bottom: 20px; }
+        .top-nav a { color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500; }
+        .top-nav a:hover { text-decoration: underline; }
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 20px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab-btn { padding: 8px 18px; border: none; border-radius: 8px; background: #e2e8f0; color: #475569; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .tab-btn.active { background: #1d4ed8; color: white; }
+        .checkbox-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 13px; color: #475569; }
+        .endpoint-badge { font-family: monospace; color: #64748b; font-size: 12px; }
+        label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #334155; }
+        textarea { width: 100%; height: 110px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-size: 14px; resize: vertical; outline: none; }
+        textarea:focus { border-color: #2563eb; }
+        .dropzone { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 25px; text-align: center; cursor: pointer; background: #f8fafc; }
+        .dropzone:hover { border-color: #2563eb; background: #f1f5f9; }
+        .examples { display: flex; gap: 8px; align-items: center; margin: 12px 0 18px; font-size: 13px; color: #64748b; }
+        .example-badge { padding: 4px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 12px; }
+        .example-badge:hover { background: #e2e8f0; }
+        .btn-submit { background: #1d4ed8; color: white; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-submit:hover { background: #1e40af; }
+        .result-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); display: none; }
+        .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .source-pill { display: inline-block; padding: 4px 12px; background: #e0f2fe; color: #0284c7; border-radius: 20px; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        .sentiment-badge { padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+        .badge-positif { background: #dcfce7; color: #15803d; }
+        .badge-negatif { background: #fee2e2; color: #b91c1c; }
+        .badge-neutre { background: #f1f5f9; color: #475569; }
+        .confidence-section { margin-bottom: 18px; }
+        .confidence-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+        .progress-bar-bg { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; width: 0%; background: #16a34a; border-radius: 5px; transition: width 0.5s ease; }
+        .text-extracted { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 14px; color: #334155; margin-bottom: 15px; }
+        details summary { font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; margin-top: 10px; }
+        pre { background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; margin-top: 8px; }
+        .spinner { border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: white; width: 14px; height: 14px; animation: spin 1s ease-in-out infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-nav">
+            <a href="/docs" target="_blank">Swagger (/docs)</a>
+            <a href="/redoc" target="_blank">ReDoc (/redoc)</a>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" id="btn_tab_texte" onclick="switchTab('texte')">Texte</button>
+                <button class="tab-btn" id="btn_tab_image" onclick="switchTab('image')">Image (OCR)</button>
+                <button class="tab-btn" id="btn_tab_audio" onclick="switchTab('audio')">Audio (ASR)</button>
+            </div>
+
+            <div class="checkbox-container">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+                    <input type="checkbox" id="auto_detect"> Utiliser la détection automatique (POST /predict)
+                </label>
+                <span class="endpoint-badge" id="endpoint_label">POST /predict/text</span>
+            </div>
+
+            <!-- TAB 1 : TEXTE -->
+            <div id="tab_texte_content">
+                <label>Avis client (texte brut)</label>
+                <textarea id="text_input" placeholder="Saisissez un avis client...">Produit de très bonne qualité, livraison super rapide, je recommande vivement !</textarea>
+                <div class="examples">
+                    <span>Exemples rapides :</span>
+                    <span class="example-badge" onclick="setText('Produit de très bonne qualité, livraison super rapide, je recommande vivement !')">Positif</span>
+                    <span class="example-badge" onclick="setText('Article reçu cassé, très déçu, le service client ne répond pas.')">Négatif</span>
+                    <span class="example-badge" onclick="setText('Colis reçu conforme à la commande.')">Neutre</span>
+                </div>
+            </div>
+
+            <!-- TAB 2 : IMAGE -->
+            <div id="tab_image_content" style="display:none;">
+                <label>Capture d'écran de l'avis client (PNG / JPG)</label>
+                <div class="dropzone" onclick="document.getElementById('file_image').click()">
+                    <span id="file_image_label">📁 Cliquez pour choisir une image (ex: I01.png)</span>
+                    <input type="file" id="file_image" accept="image/*" style="display:none;" onchange="updateFileLabel('file_image', 'file_image_label')">
+                </div>
+                <div style="margin-bottom: 18px;"></div>
+            </div>
+
+            <!-- TAB 3 : AUDIO -->
+            <div id="tab_audio_content" style="display:none;">
+                <label>Message vocal / enregistrement (WAV / MP3)</label>
+                <div class="dropzone" onclick="document.getElementById('file_audio').click()">
+                    <span id="file_audio_label">🎙️ Cliquez pour choisir un audio (ex: A01.mp3)</span>
+                    <input type="file" id="file_audio" accept="audio/*" style="display:none;" onchange="updateFileLabel('file_audio', 'file_audio_label')">
+                </div>
+                <div style="margin-bottom: 18px;"></div>
+            </div>
+
+            <button class="btn-submit" onclick="analyser()">
+                <div class="spinner" id="spinner"></div>
+                <span id="btn_text">Analyser le sentiment</span>
+            </button>
+        </div>
+
+        <!-- CARTE DE RESULTAT -->
+        <div class="result-card" id="result_card">
+            <div class="result-header">
+                <div>
+                    <div style="font-size:12px; font-weight:600; color:#64748b; margin-bottom:4px;">SOURCE DÉTECTÉE</div>
+                    <span class="source-pill" id="res_source">Texte</span>
+                </div>
+                <div>
+                    <div style="font-size:12px; font-weight:600; color:#64748b; margin-bottom:4px; text-align:right;">SENTIMENT PRÉDIT</div>
+                    <span class="sentiment-badge badge-positif" id="res_sentiment">POSITIF</span>
+                </div>
+            </div>
+
+            <div class="confidence-section">
+                <div class="confidence-label">
+                    <span>Indice de confiance</span>
+                    <span id="res_confiance_pct">85 %</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="res_progress"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:12px; font-weight:600; color:#64748b; margin-bottom:6px;">TEXTE EXTRAIT / ANALYSÉ</div>
+                <div class="text-extracted" id="res_texte"></div>
+            </div>
+
+            <details>
+                <summary>▶ Réponse JSON brute</summary>
+                <pre><code id="res_json"></code></pre>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'texte';
+        const ENDPOINTS = { texte: '/predict/text', image: '/predict/image', audio: '/predict/audio' };
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn_tab_' + tab).classList.add('active');
+
+            document.getElementById('tab_texte_content').style.display = (tab === 'texte') ? 'block' : 'none';
+            document.getElementById('tab_image_content').style.display = (tab === 'image') ? 'block' : 'none';
+            document.getElementById('tab_audio_content').style.display = (tab === 'audio') ? 'block' : 'none';
+
+            updateEndpointLabel();
+        }
+
+        function updateEndpointLabel() {
+            const auto = document.getElementById('auto_detect').checked;
+            const label = document.getElementById('endpoint_label');
+            if (auto) {
+                label.innerText = 'POST /predict (Automatique)';
+            } else {
+                label.innerText = 'POST ' + ENDPOINTS[currentTab];
+            }
+        }
+
+        document.getElementById('auto_detect').addEventListener('change', updateEndpointLabel);
+
+        function setText(text) {
+            document.getElementById('text_input').value = text;
+        }
+
+        function updateFileLabel(inputId, labelId) {
+            const file = document.getElementById(inputId).files[0];
+            if (file) {
+                document.getElementById(labelId).innerText = 'Fichier sélectionné : ' + file.name;
+            }
+        }
+
+        async function analyser() {
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btn_text');
+            const auto = document.getElementById('auto_detect').checked;
+
+            let url = auto ? '/predict' : ENDPOINTS[currentTab];
+            let options = {};
+
+            try {
+                if (currentTab === 'texte') {
+                    const texte = document.getElementById('text_input').value.trim();
+                    if (!texte) { alert('Veuillez saisir un texte'); return; }
+
+                    if (auto) {
+                        const fd = new FormData();
+                        fd.append('texte', texte);
+                        options = { method: 'POST', body: fd };
+                    } else {
+                        options = {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ texte: texte })
+                        };
+                    }
+                } else if (currentTab === 'image') {
+                    const file = document.getElementById('file_image').files[0];
+                    if (!file) { alert('Veuillez sélectionner une image'); return; }
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    options = { method: 'POST', body: fd };
+                } else if (currentTab === 'audio') {
+                    const file = document.getElementById('file_audio').files[0];
+                    if (!file) { alert('Veuillez sélectionner un fichier audio'); return; }
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    options = { method: 'POST', body: fd };
+                }
+
+                spinner.style.display = 'inline-block';
+                btnText.innerText = 'Analyse en cours...';
+
+                const res = await fetch(url, options);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert('Erreur: ' + (data.detail || JSON.stringify(data)));
+                    return;
+                }
+
+                afficherResultat(data);
+            } catch (err) {
+                alert('Erreur: ' + err.message);
+            } finally {
+                spinner.style.display = 'none';
+                btnText.innerText = 'Analyser le sentiment';
+            }
+        }
+
+        function afficherResultat(data) {
+            document.getElementById('result_card').style.display = 'block';
+            document.getElementById('res_source').innerText = data.source;
+            document.getElementById('res_texte').innerText = data.texte_extrait;
+            document.getElementById('res_json').innerText = JSON.stringify(data, null, 2);
+
+            const sent = data.sentiment_predit.toLowerCase();
+            const badge = document.getElementById('res_sentiment');
+            badge.innerText = sent.toUpperCase();
+            badge.className = 'sentiment-badge ' + (sent === 'positif' ? 'badge-positif' : sent === 'negatif' ? 'badge-negatif' : 'badge-neutre');
+
+            const pct = Math.round(data.confiance * 100);
+            document.getElementById('res_confiance_pct').innerText = pct + ' %';
+            const progress = document.getElementById('res_progress');
+            progress.style.width = pct + '%';
+            progress.style.background = (sent === 'positif') ? '#16a34a' : (sent === 'negatif') ? '#dc2626' : '#64748b';
+
+            document.getElementById('result_card').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

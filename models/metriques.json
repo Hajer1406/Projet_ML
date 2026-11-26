@@ -1,0 +1,74 @@
+{
+  "source_dataset": "dataset_sentiment_ecommerce\\textes.csv",
+  "nb_echantillons": 24,
+  "modele_selectionne": "TF-IDF mots (1,2) + LogReg (C=5)",
+  "validation_croisee": {
+    "TF-IDF mots (1,2) + LogReg (C=5)": {
+      "moyenne": 0.297,
+      "ecart_type": 0.174
+    },
+    "TF-IDF mots (1,2) + LogReg (C=10)": {
+      "moyenne": 0.297,
+      "ecart_type": 0.174
+    },
+    "TF-IDF chars (2,5) + LogReg": {
+      "moyenne": 0.213,
+      "ecart_type": 0.154
+    }
+  },
+  "test_classification_report": {
+    "negatif": {
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1-score": 0.5,
+      "support": 2.0
+    },
+    "neutre": {
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1-score": 0.5,
+      "support": 2.0
+    },
+    "positif": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 2.0
+    },
+    "accuracy": 0.6666666666666666,
+    "macro avg": {
+      "precision": 0.6666666666666666,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.6666666666666666,
+      "support": 6.0
+    },
+    "weighted avg": {
+      "precision": 0.6666666666666666,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.6666666666666666,
+      "support": 6.0
+    }
+  },
+  "matrice_confusion": [
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      2
+    ]
+  ],
+  "classes": [
+    "negatif",
+    "neutre",
+    "positif"
+  ]
+}

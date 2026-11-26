@@ -1,0 +1,15 @@
+# Fichiers de préparation / guide à exclure
+Guide_Revision_Soutenance_ML_Project.docx
+generer_doc.py
+*.docx
+
+# Environnement virtuel et caches Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Fichiers temporaires système
+.DS_Store
+Thumbs.db

@@ -1,0 +1,13 @@
+pandas
+scikit-learn
+joblib
+matplotlib
+fastapi
+uvicorn
+python-multipart
+pydantic
+pytesseract
+Pillow
+openai-whisper
+pytest
+httpx
